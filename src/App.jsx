@@ -1,5 +1,5 @@
-import React, { useRef, useState, useLayoutEffect, useEffect } from 'react';
-import { useScroll } from 'framer-motion';
+import React, { useRef, useState, useLayoutEffect, useEffect, useCallback } from 'react';
+import { useMotionValue } from 'framer-motion';
 import PremiumNavbar from './components/PremiumNavbar';
 import FerrariExperience from './components/FerrariExperience';
 import { useLenisSmoothScroll } from './hooks/useLenisSmoothScroll';
@@ -17,7 +17,29 @@ const Cars = () => {
     const renderFrameRef = useRef(null);
 
     const lenis = useLenisSmoothScroll();
-    const { scrollYProgress } = useScroll({ target: containerRef, offset: ["start start", "end end"] });
+    const scrollYProgress = useMotionValue(0);
+
+    const updateScrollProgress = useCallback(() => {
+        const container = containerRef.current;
+        if (!container) return;
+
+        const scrollDistance = container.offsetHeight - window.innerHeight;
+        if (scrollDistance <= 0) return;
+
+        const progress = Math.min(1, Math.max(0, -container.getBoundingClientRect().top / scrollDistance));
+        scrollYProgress.set(progress);
+    }, [scrollYProgress]);
+
+    useEffect(() => {
+        updateScrollProgress();
+
+        if (lenis) {
+            return lenis.on('scroll', updateScrollProgress);
+        }
+
+        window.addEventListener('scroll', updateScrollProgress, { passive: true });
+        return () => window.removeEventListener('scroll', updateScrollProgress);
+    }, [lenis, updateScrollProgress]);
 
     // Preload images
     useEffect(() => {
@@ -96,6 +118,7 @@ const Cars = () => {
 
         const unsub = scrollYProgress.on('change', renderFrame);
         const onResize = () => {
+            updateScrollProgress();
             lastFrameIndexRef.current = -1;
             renderFrame(scrollYProgress.get(), true);
         };
@@ -107,7 +130,7 @@ const Cars = () => {
             window.removeEventListener('resize', onResize);
             unsub();
         };
-    }, [imagesLoaded, scrollYProgress]);
+    }, [imagesLoaded, scrollYProgress, updateScrollProgress]);
 
     return (
         <div className="text-white font-sans" style={{ backgroundColor: '#0a0a0a' }}>
@@ -172,7 +195,48 @@ const Cars = () => {
                 </div>
             </section>
 
-            <footer id="performance" style={{background:'#050505',padding:'3rem 4rem',borderTop:'1px solid rgba(255,215,0,0.1)',textAlign:'center'}}>
+            <section id="performance" style={{background:'#0a0a0a',padding:'8rem 4rem',position:'relative',borderTop:'1px solid rgba(255,215,0,0.08)'}}>
+                <div style={{maxWidth:1400,margin:'0 auto'}}>
+                    <h2 style={{fontFamily:"'Orbitron',sans-serif",color:'#FFD700',textAlign:'center',marginBottom:'1rem',letterSpacing:'0.2em'}}>PERFORMANCE METRICS</h2>
+                    <p style={{fontFamily:"'Rajdhani',sans-serif",color:'rgba(255,255,255,0.45)',textAlign:'center',letterSpacing:'0.15em',textTransform:'uppercase',fontSize:'0.9rem',marginBottom:'5rem'}}>Engineered without compromise</p>
+
+                    <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(220px,1fr))',gap:'1.5rem',marginBottom:'5rem'}}>
+                        {[
+                            { value: '2.4s', label: '0–100 KM/H', detail: 'Launch control engaged' },
+                            { value: '412', label: 'TOP SPEED', detail: 'KM/H verified' },
+                            { value: '1,200', label: 'HORSEPOWER', detail: 'Hybrid V12 twin-turbo' },
+                            { value: '1,850', label: 'DOWNFORCE', detail: 'KG at 300 KM/H' },
+                        ].map((stat) => (
+                            <div
+                                key={stat.label}
+                                style={{
+                                    padding:'2.5rem 2rem',
+                                    borderRadius:'0.75rem',
+                                    border:'1px solid rgba(255,215,0,0.12)',
+                                    background:'linear-gradient(160deg,rgba(255,215,0,0.04) 0%,rgba(5,5,5,0.8) 60%)',
+                                    textAlign:'center',
+                                }}
+                            >
+                                <div style={{fontFamily:"'Orbitron',sans-serif",color:'#FFD700',fontSize:'2.8rem',fontWeight:600,lineHeight:1,marginBottom:'0.75rem'}}>{stat.value}</div>
+                                <div style={{fontFamily:"'Orbitron',sans-serif",color:'rgba(255,255,255,0.85)',fontSize:'0.75rem',letterSpacing:'0.2em',marginBottom:'0.5rem'}}>{stat.label}</div>
+                                <div style={{fontFamily:"'Rajdhani',sans-serif",color:'rgba(255,255,255,0.4)',fontSize:'0.85rem'}}>{stat.detail}</div>
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="group relative overflow-hidden rounded-xl border border-[rgba(255,215,0,0.1)]" style={{aspectRatio:'21/9',minHeight:280}}>
+                        <img src="/images/supercar_track.png" alt="Track dominance" className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                        <div className="absolute inset-0 bg-gradient-to-r from-[#0a0a0a] via-[#0a0a0a]/70 to-transparent"></div>
+                        <div className="absolute inset-0 flex flex-col justify-center" style={{padding:'4rem'}}>
+                            <p style={{fontFamily:"'Rajdhani',sans-serif",color:'rgba(255,215,0,0.7)',letterSpacing:'0.25em',textTransform:'uppercase',fontSize:'0.8rem',marginBottom:'1rem'}}>Born for the circuit</p>
+                            <h3 style={{fontFamily:"'Orbitron',sans-serif",color:'#fff',fontSize:'clamp(1.5rem,3vw,2.5rem)',letterSpacing:'0.08em',maxWidth:520,marginBottom:'1.5rem',lineHeight:1.3}}>EVERY CURVE. EVERY STRAIGHT. ENGINEERED TO DOMINATE.</h3>
+                            <button style={{alignSelf:'flex-start',background:'transparent',border:'1px solid rgba(255,215,0,0.9)',color:'#FFD700',padding:'0.9rem 2.2rem',fontFamily:"'Rajdhani',sans-serif",textTransform:'uppercase',letterSpacing:'0.15em',fontSize:'0.8rem',cursor:'pointer'}}>Book a Test Drive</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <footer style={{background:'#050505',padding:'3rem 4rem',borderTop:'1px solid rgba(255,215,0,0.1)',textAlign:'center'}}>
                 <p style={{fontFamily:"'Rajdhani',sans-serif",color:'rgba(255,255,255,0.3)',letterSpacing:'0.2em'}}>© SUPERCAR MOTORS</p>
             </footer>
         </div>
